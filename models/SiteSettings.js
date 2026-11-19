@@ -27,7 +27,8 @@ const siteSettingsSchema = new mongoose.Schema(
     publicEmail: { type: String, trim: true, maxlength: 160, default: '' },
     address: { type: String, trim: true, maxlength: 240, default: '' },
     hours: { type: String, trim: true, maxlength: 120, default: '' },
-    logoUrl: { type: String, trim: true, maxlength: 400, default: '' },
+    // data: URLs for logos stored in Mongo (Vercel has no persistent disk)
+    logoUrl: { type: String, trim: true, maxlength: 3500000, default: '' },
     services: { type: [serviceSchema], default: [] },
     caseTypes: { type: [caseTypeSchema], default: [] },
   },

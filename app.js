@@ -16,30 +16,45 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
 
-const allowedOrigins = (process.env.CLIENT_ORIGINS || 'http://localhost:3000,http://localhost:3001')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+const normalizeOrigin = (o) => String(o || '').trim().replace(/\/$/, '');
+
+const allowedOrigins = [
+  ...new Set(
+    [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://lawfrontend-flame.vercel.app',
+      'https://lawadmin.vercel.app',
+      ...(process.env.CLIENT_ORIGINS || '').split(','),
+    ]
+      .map(normalizeOrigin)
+      .filter(Boolean)
+  ),
+];
 
 app.set('trust proxy', 1);
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
   })
 );
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-      return cb(null, false);
-    },
-  })
-);
-app.use(express.json({ limit: '200kb' }));
+
+const corsOptions = {
+  origin(origin, cb) {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(normalizeOrigin(origin))) return cb(null, true);
+    return cb(null, false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+app.use(express.json({ limit: '2mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-if (process.env.VERCEL) {
-  app.use('/uploads', express.static(path.join('/tmp', 'uploads')));
-}
 if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   app.use(morgan('dev'));
 }

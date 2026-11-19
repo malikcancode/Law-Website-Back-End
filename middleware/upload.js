@@ -1,26 +1,4 @@
-const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
-
-// On Vercel the filesystem is read-only except /tmp
-const uploadDir = process.env.VERCEL
-  ? path.join('/tmp', 'uploads')
-  : path.join(__dirname, '..', 'uploads');
-
-try {
-  fs.mkdirSync(uploadDir, { recursive: true });
-} catch (err) {
-  console.warn('Could not create upload dir:', err.message);
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase() || '.png';
-    const finalExt = ['.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif'].includes(ext) ? ext : '.png';
-    cb(null, `logo-${Date.now()}${finalExt}`);
-  },
-});
 
 const fileFilter = (_req, file, cb) => {
   if (/^image\/(png|jpe?g|webp|gif|svg\+xml)$/i.test(file.mimetype)) {
@@ -30,10 +8,11 @@ const fileFilter = (_req, file, cb) => {
   }
 };
 
+// Memory storage — Vercel has no persistent disk; logo is saved to MongoDB as a data URL
 const uploadLogo = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 1.5 * 1024 * 1024 },
 }).single('logo');
 
-module.exports = { uploadLogo, uploadDir };
+module.exports = { uploadLogo };

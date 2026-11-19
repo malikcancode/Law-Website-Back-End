@@ -1,5 +1,3 @@
-const path = require('path');
-const fs = require('fs');
 const SiteSettings = require('../models/SiteSettings');
 const { defaultSettings } = require('../utils/defaultSettings');
 
@@ -124,23 +122,17 @@ exports.updateSettings = async (req, res, next) => {
   }
 };
 
-// POST /api/settings/logo  (admin) multipart
+// POST /api/settings/logo  (admin) multipart — stored as data URL in MongoDB
 exports.uploadLogo = async (req, res, next) => {
   try {
-    if (!req.file) {
+    if (!req.file || !req.file.buffer) {
       return res.status(400).json({ success: false, message: 'Please choose a logo image' });
     }
 
     const doc = await getOrCreate();
-    const previous = doc.logoUrl;
-
-    doc.logoUrl = `/uploads/${req.file.filename}`;
+    const mime = req.file.mimetype || 'image/png';
+    doc.logoUrl = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
     await doc.save();
-
-    if (previous && previous.startsWith('/uploads/')) {
-      const oldPath = path.join(__dirname, '..', previous);
-      fs.promises.unlink(oldPath).catch(() => {});
-    }
 
     res.json({
       success: true,
@@ -156,10 +148,6 @@ exports.uploadLogo = async (req, res, next) => {
 exports.removeLogo = async (req, res, next) => {
   try {
     const doc = await getOrCreate();
-    if (doc.logoUrl && doc.logoUrl.startsWith('/uploads/')) {
-      const oldPath = path.join(__dirname, '..', doc.logoUrl);
-      fs.promises.unlink(oldPath).catch(() => {});
-    }
     doc.logoUrl = '';
     await doc.save();
     res.json({ success: true, data: publicShape(doc), message: 'Logo removed' });
