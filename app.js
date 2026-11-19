@@ -68,7 +68,7 @@ app.use(async (req, res, next) => {
     res.status(500).json({
       success: false,
       message: 'Server failed to connect to the database. Check MONGO_URI and Atlas network access.',
-      detail: process.env.NODE_ENV === 'production' ? undefined : err.message,
+      detail: err.message,
     });
   }
 });
