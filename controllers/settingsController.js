@@ -122,16 +122,28 @@ exports.updateSettings = async (req, res, next) => {
   }
 };
 
-// POST /api/settings/logo  (admin) multipart — stored as data URL in MongoDB
+const DATA_URL_RE = /^data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,[A-Za-z0-9+/=\s]+$/i;
+const MAX_LOGO_CHARS = 1_800_000; // ~1.3MB binary
+
+// POST /api/settings/logo  (admin) — JSON { logo: "data:image/...;base64,..." }
 exports.uploadLogo = async (req, res, next) => {
   try {
-    if (!req.file || !req.file.buffer) {
-      return res.status(400).json({ success: false, message: 'Please choose a logo image' });
+    const logo = typeof req.body?.logo === 'string' ? req.body.logo.trim() : '';
+    if (!logo || !DATA_URL_RE.test(logo)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Send a valid image as a data URL (PNG, JPG, WEBP, GIF, or SVG)',
+      });
+    }
+    if (logo.length > MAX_LOGO_CHARS) {
+      return res.status(400).json({
+        success: false,
+        message: 'Logo is too large. Please use an image under 1MB.',
+      });
     }
 
     const doc = await getOrCreate();
-    const mime = req.file.mimetype || 'image/png';
-    doc.logoUrl = `data:${mime};base64,${req.file.buffer.toString('base64')}`;
+    doc.logoUrl = logo.replace(/\s+/g, '');
     await doc.save();
 
     res.json({
