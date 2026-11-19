@@ -2,14 +2,21 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 
-const uploadDir = path.join(__dirname, '..', 'uploads');
-fs.mkdirSync(uploadDir, { recursive: true });
+// On Vercel the filesystem is read-only except /tmp
+const uploadDir = process.env.VERCEL
+  ? path.join('/tmp', 'uploads')
+  : path.join(__dirname, '..', 'uploads');
+
+try {
+  fs.mkdirSync(uploadDir, { recursive: true });
+} catch (err) {
+  console.warn('Could not create upload dir:', err.message);
+}
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase() || '.png';
-    const safe = `.${ext.replace('.', '')}`.replace(/[^.a-z0-9]/gi, '');
     const finalExt = ['.png', '.jpg', '.jpeg', '.webp', '.svg', '.gif'].includes(ext) ? ext : '.png';
     cb(null, `logo-${Date.now()}${finalExt}`);
   },

@@ -1,0 +1,4 @@
+// Vercel serverless entry — exports the Express app
+const app = require('../app');
+
+module.exports = app;
